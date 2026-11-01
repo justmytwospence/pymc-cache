@@ -20,6 +20,9 @@ def main(argv: list[str] | None = None) -> int:
     clear = sub.add_parser("clear", help="delete only entries owned by pymc-cache")
     clear.add_argument("--yes", action="store_true", required=True,
                        help="confirm permanent removal of owned entries")
+    for command in (listed, prune, clear):
+        command.add_argument("--directory", "--dir", dest="directory",
+                             default=argparse.SUPPRESS, help="cache directory")
     args = parser.parse_args(argv)
     cache = DiskCache(Path(args.directory))
     if args.command == "list":

@@ -142,7 +142,7 @@ def test_disk_management_cli_and_write_failure(tmp_path):
         main(["--directory", str(tmp_path), "clear"])
     assert refusal.value.code == 2
     assert [entry.key for entry in cache.entries()] == ["c" * 64]
-    assert main(["--directory", str(tmp_path), "clear", "--yes"]) == 0
+    assert main(["clear", "--directory", str(tmp_path), "--yes"]) == 0
     assert not cache.entries()
     assert foreign.exists()
     with pytest.raises(ValueError):
