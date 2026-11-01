@@ -12,12 +12,14 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           python-version: '3.13'
+      - run: uv python install 3.13
+      - run: uv lock --check --no-config
       - run: uv build --no-sources
-      - run: uv run --locked twine check dist/*
-      - run: uv run --locked python scripts/check_artifact.py
+      - run: uv run --frozen twine check dist/*
+      - run: uv run --frozen python scripts/check_artifact.py
       - name: Publish to PyPI using trusted publishing
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

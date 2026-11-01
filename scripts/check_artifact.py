@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 REQUIRED = {"src/pymc_cache/identity.py", "src/pymc_cache/backends.py",
             "tests/test_cache.py", "scripts/smoke_test.py", "README.md", "LICENSE",
-            "_quarto.yml", "guides/identity.qmd"}
+            "_quarto.yml", "guides/identity.qmd", "api/index.qmd",
+            "src/pymc_cache/py.typed"}
 FORBIDDEN = (".extraction-source", ".git/", ".venv/", "_site/", ".nc", ".coverage")
 
 
@@ -21,7 +22,7 @@ def check(names: list[str], *, wheel: bool) -> None:
         raise ValueError("empty archive or forbidden private/build file in artifact")
     normalized = [name if wheel else "/".join(name.split("/")[1:]) for name in names]
     if wheel:
-        if "pymc_cache/identity.py" not in normalized or not any(
+        if not {"pymc_cache/identity.py", "pymc_cache/py.typed"}.issubset(normalized) or not any(
             n.endswith(".dist-info/METADATA") for n in normalized
         ):
             raise ValueError("wheel is missing code or package metadata")
@@ -39,6 +40,13 @@ def main() -> None:
     wheel, sdist = wheels[0], sdists[0]
     with zipfile.ZipFile(wheel) as archive:
         check(archive.namelist(), wheel=True)
+        metadata_name = next(n for n in archive.namelist() if n.endswith(".dist-info/METADATA"))
+        metadata = archive.read(metadata_name).decode()
+        if "Name: pymc-cache" not in metadata or "Version: 0.1.0" not in metadata:
+            raise ValueError("incorrect wheel distribution metadata")
+        if any(name in metadata.lower() for name in ("requires-dist: pymc-monitor",
+                                                   "requires-dist: cloudposterior")):
+            raise ValueError("foreign runtime dependency in wheel metadata")
     with tarfile.open(sdist, "r:gz") as archive:
         check(archive.getnames(), wheel=False)
     scratch = ROOT / "build"
