@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import shutil
 
@@ -146,6 +147,148 @@ def test_preflight_and_status(model, idata, tmp_path):
     assert not session.lookup({"draws": 2}, operation="sample_smc").hit
     assert not session.lookup({"draws": 2}, overwrite=True).hit
     assert CacheSession(cache=False, model=model).lookup({"draws": 2}).key is None
+
+
+def test_custom_backend_optional_metadata(model, idata):
+    class Minimal:
+        def __init__(self):
+            self.data = {}
+
+        def load(self, key):
+            return self.data.get(key)
+
+        def save(self, key, idata):
+            self.data[key] = idata
+
+    class Legacy(Minimal):
+        def load(self, key, sample_kwargs=None):
+            assert sample_kwargs == {"draws": 2}
+            return super().load(key)
+
+        def save(self, key, idata, sample_kwargs=None):
+            assert sample_kwargs == {"draws": 2}
+            super().save(key, idata)
+
+    class Extended(Minimal):
+        def load(self, key, *, sample_kwargs=None):
+            assert sample_kwargs == {"draws": 2}
+            return super().load(key)
+
+        def save(self, key, idata, *, sample_kwargs=None, operation=None, status=None,
+                 software_versions=None):
+            assert (sample_kwargs, operation, status, software_versions) == (
+                {"draws": 2}, "sample", "complete", {"runner": "1"})
+            super().save(key, idata)
+
+    class Variadic(Minimal):
+        def load(self, key, **kwargs):
+            assert kwargs == {"sample_kwargs": {"draws": 2}}
+            return super().load(key)
+
+        def save(self, key, idata, **kwargs):
+            assert kwargs == {"sample_kwargs": {"draws": 2}, "operation": "sample",
+                              "status": "complete", "software_versions": {"runner": "1"}}
+            super().save(key, idata)
+
+    class PositionalOnly(Minimal):
+        def load(self, key, sample_kwargs=None, /):
+            assert sample_kwargs is None
+            return super().load(key)
+
+        def save(self, key, idata, sample_kwargs=None, /):
+            assert sample_kwargs is None
+            super().save(key, idata)
+
+    for backend_type in (Minimal, Legacy, Extended, Variadic, PositionalOnly):
+        backend = backend_type()
+        session = CacheSession(backend, model=model)
+        lookup = session.lookup({"draws": 2}, versions={"runner": "1"})
+        assert not lookup.hit
+        assert session.store(lookup, idata)
+        assert session.lookup({"draws": 2}, versions={"runner": "1"}).hit
+
+
+def test_backend_uninspectable_signature_uses_minimal_protocol(monkeypatch, model, idata):
+    import pymc_cache.session as module
+
+    class Backend:
+        def load(self, key):
+            return None
+
+        def save(self, key, value):
+            self.saved = (key, value)
+
+    backend = Backend()
+    signature = module.inspect.signature
+
+    def unavailable(method):
+        if getattr(method, "__self__", None) is backend:
+            raise ValueError("no signature")
+        return signature(method)
+
+    monkeypatch.setattr(module.inspect, "signature", unavailable)
+    session = CacheSession(backend, model=model)
+    lookup = session.lookup({"draws": 2})
+    assert session.store(lookup, idata)
+    assert backend.saved == (lookup.key, idata)
+
+
+def test_backend_internal_typeerror_is_not_retried(model, idata):
+    class Backend:
+        def __init__(self):
+            self.reads = 0
+            self.writes = 0
+
+        def load(self, key, sample_kwargs=None):
+            self.reads += 1
+            raise TypeError("read side effect")
+
+        def save(self, key, idata, sample_kwargs=None):
+            self.writes += 1
+            raise TypeError("write side effect")
+
+    backend = Backend()
+    session = CacheSession(backend, model=model)
+    with pytest.warns(CacheWarning, match="cache read failed.*read side effect"):
+        lookup = session.lookup({"draws": 2})
+    with pytest.warns(CacheWarning, match="cache write failed.*write side effect"):
+        assert not session.store(lookup, idata)
+    assert (backend.reads, backend.writes) == (1, 1)
+
+
+@pytest.mark.parametrize(("attribute", "actual"), [
+    ("pymc_monitor_convergence", "pymc"),
+    ("cloudposterior_convergence", None),
+])
+def test_reported_sampler_fallback_never_stored_under_nutpie_key(
+        monkeypatch, model, idata, attribute, actual):
+    cache = MemoryCache()
+    calls = []
+
+    def fallback(*, model, **kwargs):
+        calls.append(kwargs)
+        result = copy.deepcopy(idata)
+        result.posterior.attrs[attribute] = json.dumps(
+            {"status": "complete", "effective_sampler": actual})
+        return result
+
+    monkeypatch.setattr(pm, "sample", fallback)
+    kwargs = dict(model=model, cache=cache, draws=2, tune=2, chains=1, cores=1,
+                  nuts_sampler="nutpie", random_seed=4)
+    for _ in range(2):
+        with pytest.warns(CacheWarning, match="effective sampler differs"):
+            assert sample(**kwargs) is not None
+    assert len(calls) == 2 and len(cache) == 0
+
+
+def test_matching_reported_sampler_still_cached(model, idata):
+    cache = MemoryCache()
+    session = CacheSession(cache, model=model)
+    lookup = session.lookup({"draws": 2}, sampler_identity="nutpie")
+    idata.posterior.attrs["pymc_monitor_convergence"] = json.dumps(
+        {"status": "complete", "effective_sampler": "nutpie"})
+    assert session.store(lookup, idata, effective_sampler="nutpie")
+    assert session.lookup({"draws": 2}, sampler_identity="nutpie").hit
 
 
 def test_disabled_zero_hash_work(monkeypatch, model):

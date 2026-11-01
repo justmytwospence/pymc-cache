@@ -46,3 +46,6 @@ CacheSession.store(lookup, idata, *, status='complete', effective_sampler=None)
 ```
 
 Publish only if graph and result still match the preflight identity.
+
+A reported sampler fallback is not stored under the preflight key; callers
+must preflight a new identity if they want to cache that result.

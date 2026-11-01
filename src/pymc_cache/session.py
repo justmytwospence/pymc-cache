@@ -2,13 +2,31 @@
 from __future__ import annotations
 
 import copy
+import inspect
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 
 from pymc_cache.backends import CacheBackend, resolve_cache
 from pymc_cache.identity import UncacheableError, cache_key, model_digest
-from pymc_cache.policy import CachePolicy, CacheWarning, eligible
+from pymc_cache.policy import CachePolicy, CacheWarning, eligible, report_from_idata
+
+
+def _backend_kwargs(method, metadata: dict) -> dict:
+    """Pass optional metadata only when a backend accepts it as keywords.
+
+    If inspection is unavailable, use the minimal positional load/save protocol.
+    Do not probe by calling the method: a failed write may already have effects.
+    """
+    try:
+        parameters = inspect.signature(method).parameters
+    except (TypeError, ValueError):
+        return {}
+    if any(param.kind is inspect.Parameter.VAR_KEYWORD for param in parameters.values()):
+        return metadata
+    return {name: value for name, value in metadata.items()
+            if name in parameters and parameters[name].kind in (
+                inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)}
 
 
 @dataclass(frozen=True)
@@ -75,7 +93,8 @@ class CacheSession:
             return CacheLookup(self.backend, None, False, None, kwargs, str(exc), operation,
                                dict(versions or {}), sampler_identity, None)
         try:
-            cached = None if overwrite else self.backend.load(key, sample_kwargs=kwargs)
+            cached = None if overwrite else self.backend.load(
+                key, **_backend_kwargs(self.backend.load, {"sample_kwargs": kwargs}))
         except Exception as exc:
             warnings.warn(f"cache read failed; sampling anew: {exc}", CacheWarning, stacklevel=2)
             cached = None
@@ -84,7 +103,11 @@ class CacheSession:
 
     def store(self, lookup: CacheLookup, idata, *, status="complete",
               effective_sampler=None) -> bool:
-        """Publish only if graph and result still match the preflight identity."""
+        """Publish only if graph and result still match the preflight identity.
+
+        A reported sampler fallback is not stored under the preflight key; callers
+        must preflight a new identity if they want to cache that result.
+        """
         if lookup.backend is None or lookup.key is None or lookup.hit:
             return False
         if self.model is None:
@@ -97,14 +120,25 @@ class CacheSession:
         except UncacheableError as exc:
             warnings.warn(f"sampling result is not cacheable: {exc}", CacheWarning, stacklevel=2)
             return False
+        report = report_from_idata(idata)
+        if (report is not None and "effective_sampler" in report and
+                report["effective_sampler"] != lookup.sampler_identity):
+            warnings.warn("reported effective sampler differs from preflight identity; "
+                          "result was not cached", CacheWarning, stacklevel=2)
+            return False
         if not eligible(idata, status=status, kwargs=lookup.normalized_kwargs,
-                        operation=lookup.operation, effective_sampler=effective_sampler,
+                        operation=lookup.operation,
+                        effective_sampler=(report["effective_sampler"] if report is not None
+                                           and "effective_sampler" in report
+                                           else effective_sampler),
                         sampler_identity=lookup.sampler_identity):
             return False
         try:
-            lookup.backend.save(lookup.key, idata, sample_kwargs=lookup.normalized_kwargs,
-                                operation=lookup.operation, status=status,
-                                software_versions=lookup.versions)
+            metadata = {"sample_kwargs": lookup.normalized_kwargs,
+                        "operation": lookup.operation, "status": status,
+                        "software_versions": lookup.versions}
+            lookup.backend.save(lookup.key, idata,
+                                **_backend_kwargs(lookup.backend.save, metadata))
         except Exception as exc:
             warnings.warn(f"sampling succeeded but cache write failed: {exc}", CacheWarning,
                           stacklevel=2)
