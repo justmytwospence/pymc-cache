@@ -1,0 +1,30 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - getting-started.qmd
+    - guides/*.qmd
+    - reference.qmd
+    - contributing.qmd
+    - releasing.qmd
+website:
+  title: pymc-cache
+  site-url: https://justmytwospence.github.io/pymc-cache/
+  repo-url: https://github.com/justmytwospence/pymc-cache
+  navbar:
+    left:
+      - href: getting-started.qmd
+        text: Get started
+      - href: guides/identity.qmd
+        text: Identity and safety
+      - href: guides/storage.qmd
+        text: Storage
+      - href: reference.qmd
+        text: API
+format:
+  html:
+    theme: cosmo
+    toc: true
+execute:
+  enabled: false

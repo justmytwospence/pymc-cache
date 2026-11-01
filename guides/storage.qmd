@@ -1,0 +1,16 @@
+---
+title: Storage and management
+---
+
+`cache=True` or `cache="memory"` uses a process-wide, eight-entry LRU. `cache="disk"` uses `.pymc-cache/`; a custom directory `Path` chooses another location. Both memory reads and writes copy results so later additions to a trace cannot contaminate an entry. `cache=False` bypasses hashing entirely; `overwrite=True` skips a hit and publishes a new entry after sampling.
+
+Disk entries are NetCDF files under a human-readable model directory. Each filename contains the full 64-digit SHA-256 key, and the posterior group includes schema, key, status, operation, creation time and versions. Reads verify the embedded key and status before returning fully loaded data. Writes serialize to a unique temporary file, then atomically replace the entry. Corrupt files are treated as misses with a warning; nothing untrusted is executed from the metadata. Only complete or verified `met` results may be stored. The default limit is 20 entries per model.
+
+```bash
+pymc-cache --dir .pymc-cache list
+pymc-cache --dir .pymc-cache list --json
+pymc-cache --dir .pymc-cache prune --keep 10
+pymc-cache --dir .pymc-cache clear
+```
+
+`cleanup_cache(path)` removes only entries recognized as this package's format. Management commands preserve unrelated files, legacy formats and symlinks, and do not delete the root directory. These commands permanently remove selected cache entries, not your underlying model or data. Restrict directory permissions because posterior samples may reveal sensitive observations.

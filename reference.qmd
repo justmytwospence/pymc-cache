@@ -1,0 +1,19 @@
+---
+title: API reference
+---
+
+::: {#api}
+
+| Object | Purpose |
+|---|---|
+| `sample(*, model=None, cache=True, overwrite=False, policy=None, namespace="", model_key=None, sampler_key=None, sample_fn=None, **kwargs)` | Explicit native or custom sampling with reusable results. |
+| `sample_smc(*, model=None, cache=True, overwrite=False, **kwargs)` | Native SMC with a distinct cache identity. |
+| `CacheSession(cache=True, *, model, policy=None, namespace="", model_key=None, sampler_key=None)` | Preflight lookup and delayed storage for local or remote callers. |
+| `CacheSession.lookup(sample_kwargs, *, operation="sample", overwrite=False, versions=None, sampler_identity=None)` | Return `CacheLookup` containing `hit`, `result`, `key` and `normalized_kwargs`. |
+| `CacheSession.store(lookup, idata, *, status="complete", effective_sampler=None)` | Store only a complete or verified adaptive result from an unchanged model. |
+| `MemoryCache(max_entries=8)` / `DiskCache(base_dir=None, model=None, max_entries_per_model=20)` | Thread-safe LRU / atomic one-file NetCDF storage. |
+| `CacheEntry`, `CacheLookup`, `CachePolicy`, `CacheWarning`, `UncacheableError` | Storage metadata, lookup decision, reuse policy and safe diagnostics. |
+| `model_digest(model, *, model_key=None)`, `cache_key(model_identity, sample_kwargs, *, operation="sample", versions=None, namespace="", sampler_key=None)` | Versioned content hashes; unsafe inputs fail closed. |
+| `cleanup_cache(base_dir=None)` | Remove only owned disk entries and leave foreign data untouched. |
+
+:::

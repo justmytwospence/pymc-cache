@@ -1,0 +1,28 @@
+---
+title: Identity and safety
+---
+
+A cache hit is safe only if the model, sampler, settings and environment are identified. A false miss merely reruns sampling; a false hit returns the wrong posterior. `model_digest` fingerprints the log-probability graph, all random variables, deterministics, potentials, constants, shared/observed data, coordinates and dimensions. The digest is stable across processes for equivalent models. The full SHA-256 cache key also includes the operation (`sample` versus `smc`), every normalized sampling option, sampler identity, namespace, schema and installed software versions. It never relies on `repr()` or a Python object address. RNG kwargs are keyed by their state **before** sampling; an advanced generator does not match an earlier state.
+
+Unknown/custom PyTensor Ops require a caller-maintained `model_key`, because their Python implementation cannot be inferred from their public graph. Unsupported kwargs disable caching with a `CacheWarning`; an explicit `sampler_key` permits callables, including step methods or callbacks, but the caller must change it when implementation or captured state changes. An unrelated arbitrary object is never made cacheable by a sampler key. A custom runner may supply `__pymc_cache_normalize__(model, call_kwargs)` and return exactly `call_kwargs`, `key_kwargs`, `sampler_identity` and `versions`; integration authors are responsible for faithfully identifying all sampler options and actual implementations. Prefer `cache=False` if you cannot make that guarantee.
+
+`CacheSession.lookup()` runs before any sampler or remote service starts. Save its lookup and call `store()` after sampling, using the original model. A changed graph during sampling prevents storage. Failed, stopped, capped, futile, incomplete or unverified adaptive results are not stored; `status="met"` requires an attested convergence report. An ordinary completed result requires matching requested chain and draw counts. `CachePolicy(reuse_unseeded=False)` forbids reusing unseeded runs.
+
+```python
+import pymc as pm
+import pymc_cache as pc
+
+with pm.Model() as model:
+    pm.Normal("mu", 0, 1)
+
+session = pc.CacheSession(cache="disk", model=model)
+lookup = session.lookup({"draws": 100, "tune": 100, "chains": 1,
+                         "cores": 1, "random_seed": 3})
+if lookup.hit:
+    trace = lookup.result
+else:
+    trace = pm.sample(model=model, **lookup.normalized_kwargs)
+    session.store(lookup, trace, status="complete")
+```
+
+Cache files are not authenticated against malicious writers. Use private directories; never share a cache with untrusted users. Legacy cache entries from other packages are preserved, never silently reused.

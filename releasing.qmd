@@ -1,0 +1,11 @@
+---
+title: Release checklist
+---
+
+1. Run `bash scripts/lock.sh` and `uv run --locked pytest -q --cov=pymc_cache --cov-fail-under=85`.
+2. Run `uv run --locked ruff check src tests scripts` and `bash scripts/build-docs.sh`.
+3. Validate PyMC 5.28/ArviZ 0.x and PyMC 6/ArviZ 1.x on the supported Python matrix in CI.
+4. Build with `uv build --no-sources`; run `python scripts/check_artifact.py` for archive scope and isolated wheel/sdist smoke tests.
+5. Inspect `dist/` and changelog, then tag a reviewed commit. Publishing to PyPI and GitHub Pages is a separate, manual release action.
+
+Never upload test results or real posterior data. Do not remove old external cache directories during migration.

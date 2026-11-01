@@ -1,0 +1,60 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.12'
+            pymc: 'pymc>=5.28,<6'
+            arviz: 'arviz>=0.17,<1'
+            numpy: 'numpy<2.4'
+          - python: '3.13'
+            pymc: 'pymc>=5.28,<6'
+            arviz: 'arviz>=0.17,<1'
+            numpy: 'numpy<2.4'
+          - python: '3.12'
+            pymc: 'pymc>=6,<7'
+            arviz: 'arviz>=1,<2'
+            numpy: 'numpy>=1.25'
+          - python: '3.13'
+            pymc: 'pymc>=6,<7'
+            arviz: 'arviz>=1,<2'
+            numpy: 'numpy>=1.25'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv venv --python '${{ matrix.python }}'
+      - run: uv pip install --python .venv/bin/python -e . --group dev '${{ matrix.pymc }}' '${{ matrix.arviz }}' '${{ matrix.numpy }}'
+      - run: .venv/bin/pytest -q --cov=pymc_cache --cov-fail-under=85
+      - run: .venv/bin/ruff check src tests scripts examples
+      - run: .venv/bin/python examples/basic.py && .venv/bin/python examples/preflight.py
+  docs-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.13'
+      - uses: quarto-dev/quarto-actions/setup@v2
+      - run: uv sync --locked --all-groups
+      - run: bash scripts/build-docs.sh
+      - run: uv build --no-sources
+      - run: uv run --locked twine check dist/*
+      - run: uv run --locked python scripts/check_artifact.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate
+          path: dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quarto-site
+          path: _site/

@@ -1,0 +1,12 @@
+---
+title: pymc-cache
+---
+
+Safe, model-aware reuse of local PyMC sampling results. Independent of cloudposterior, pymc-monitor and Modal.
+
+- [Getting started](getting-started.qmd): local sampling and preflight cache checks.
+- [Identity and safety](guides/identity.qmd): when reuse is safe, and when it is refused.
+- [Storage](guides/storage.qmd): memory, NetCDF, CLI, and migration.
+- [API reference](reference.qmd): public functions and classes.
+
+Supports Python 3.11+, PyMC 5.28–6 and ArviZ 0.x–1.x. This 0.1.0 release candidate is not yet published to PyPI; install from this repository or an immutable Git commit for now.

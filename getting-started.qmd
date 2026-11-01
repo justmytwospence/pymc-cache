@@ -1,0 +1,37 @@
+---
+title: Getting started
+---
+
+Install from a pinned commit, while the package is not yet on PyPI:
+
+```bash
+pip install 'pymc-cache @ git+https://github.com/justmytwospence/pymc-cache.git@<commit-sha>'
+```
+
+```python
+import pymc as pm
+import pymc_cache as pc
+
+with pm.Model() as model:
+    mu = pm.Normal("mu", 0, 1)
+    trace = pc.sample(model=model, draws=100, tune=100, chains=1,
+                      cores=1, random_seed=12, cache="disk", progressbar=False)
+    again = pc.sample(model=model, draws=100, tune=100, chains=1,
+                      cores=1, random_seed=12, cache="disk", progressbar=False)
+```
+
+`cache=True` uses an eight-entry in-memory LRU. `cache="disk"` uses `.pymc-cache/`; a custom path selects a private cache directory. `cache=False` neither hashes the model nor reads/writes cache data. `overwrite=True` skips reading and atomically replaces a matching entry. Use `pc.sample_smc(model=model, ...)` for a separate SMC identity.
+
+For remote transports that must avoid provisioning on a cache hit:
+
+```python
+session = pc.CacheSession(cache="disk", model=model)
+lookup = session.lookup({"draws": 100, "random_seed": 12})
+if lookup.hit:
+    trace = lookup.result
+else:
+    trace = pm.sample(model=model, **lookup.normalized_kwargs)
+    session.store(lookup, trace, status="complete")
+```
+
+A runner integrated with `pc.sample(..., sample_fn=runner)` can define `__pymc_cache_normalize__(model, call_kwargs)` returning a dict with **exactly** `call_kwargs`, `key_kwargs`, `sampler_identity`, and `versions`. The caller receives `call_kwargs`; the key uses `key_kwargs` and a sampler-specific identity. A trusted caller without a normalization hook needs a unique `sampler_key`. For manual adaptive results, `store()` only accepts an attested `met` convergence report; stopped/capped/futile results are misses.

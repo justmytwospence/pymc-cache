@@ -1,0 +1,5 @@
+---
+title: Contributing
+---
+
+Follow the [repository contributing guide](https://github.com/justmytwospence/pymc-cache/blob/main/CONTRIBUTING.md) for installation and checks. Cache identity and persistence changes need explicit tests for false hits, incomplete results, older ArviZ and legacy data preservation. Do not commit posterior files, `.extraction-source/`, or generated site output.
