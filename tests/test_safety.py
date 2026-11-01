@@ -137,7 +137,13 @@ def test_disk_management_cli_and_write_failure(tmp_path):
     cache.save("b" * 64, idata)
     assert cache.delete("b" * 64)
     assert not cache.delete("b" * 64)
-    assert main(["--dir", str(tmp_path), "clear"]) == 0
+    cache.save("c" * 64, idata)
+    with pytest.raises(SystemExit) as refusal:
+        main(["--directory", str(tmp_path), "clear"])
+    assert refusal.value.code == 2
+    assert [entry.key for entry in cache.entries()] == ["c" * 64]
+    assert main(["--directory", str(tmp_path), "clear", "--yes"]) == 0
+    assert not cache.entries()
     assert foreign.exists()
     with pytest.raises(ValueError):
         DiskCache(tmp_path, max_entries_per_model=0)

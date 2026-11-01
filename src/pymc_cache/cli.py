@@ -10,15 +10,18 @@ from pymc_cache.backends import DiskCache
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pymc-cache", description=__doc__)
-    parser.add_argument("--dir", default=".pymc-cache", help="cache directory (default: .pymc-cache)")
+    parser.add_argument("--directory", "--dir", dest="directory", default=".pymc-cache",
+                        help="cache directory (default: .pymc-cache)")
     sub = parser.add_subparsers(dest="command", required=True)
     listed = sub.add_parser("list", help="inspect owned cache entries")
     listed.add_argument("--json", action="store_true", help="machine-readable metadata")
     prune = sub.add_parser("prune", help="keep the newest entries per model")
     prune.add_argument("--keep", type=int, default=20)
-    sub.add_parser("clear", help="delete only entries owned by pymc-cache")
+    clear = sub.add_parser("clear", help="delete only entries owned by pymc-cache")
+    clear.add_argument("--yes", action="store_true", required=True,
+                       help="confirm permanent removal of owned entries")
     args = parser.parse_args(argv)
-    cache = DiskCache(Path(args.dir))
+    cache = DiskCache(Path(args.directory))
     if args.command == "list":
         entries = cache.entries()
         if args.json:
