@@ -87,7 +87,7 @@ def test_disk_roundtrip_metadata_attrs(tmp_path, idata, model):
     tampered = path.with_suffix(".tampered")
     shutil.copyfile(path, tampered)
     with h5py.File(tampered, "r+") as h5:
-        h5["posterior"].attrs["_pymc_cache_entry_v2"] = '{"schema":2,"key":"wrong"}'
+        h5["posterior"].attrs["_pymc_cache_entry_v3"] = '{"schema":3,"key":"wrong"}'
     os.replace(tampered, path)
     with pytest.warns(CacheWarning):
         assert cache.load(key) is None

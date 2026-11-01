@@ -11,6 +11,9 @@ import numpy as np
 _CODEC_ATTR = "_pymc_cache_attrs_codec_v1"
 _TEXT_CODEC_ATTR = "_pymc_cache_text_codec_v1"
 _TEXT_GROUPS = {"sample_stats", "warmup_sample_stats"}
+_TEXT_VARS = {"divergence_message", "warning"}
+_TEXT_MARKER = "json-tagged-v2"
+_REAL_FLOAT_TYPES = frozenset(np.dtype(code).type for code in np.typecodes["Float"])
 
 
 def group_names(idata) -> list[str]:
@@ -122,38 +125,47 @@ def _containers(idata):
                     yield group[key]
 
 
-def _encode_text(data):
+def _encode_text(data, group, var):
     records = []
-    for value in data.values.flat:
+    for index in np.ndindex(data.shape):
+        value = data.values[index]
         if value is None:
             record = [0]
         elif type(value) in (str, np.str_):
             record = [1, str(value)]
         elif type(value) in (bytes, np.bytes_):
             record = [2, base64.b64encode(bytes(value)).decode("ascii")]
+        elif (type(value) is float or type(value) in _REAL_FLOAT_TYPES) and np.isnan(value):
+            record = [3]
         else:
-            raise TypeError("unsupported divergence_message object value")
-        records.append(json.dumps(record, ensure_ascii=True))
+            raise TypeError(f"unsupported diagnostic text {group}.{var} at index {index}: "
+                            f"{type(value).__name__}")
+        records.append(json.dumps(record, ensure_ascii=True, allow_nan=False))
     width = max((len(record) for record in records), default=1)
     encoded = np.asarray(records, dtype=f"U{width}").reshape(data.shape)
     result = data.copy(data=encoded)
-    result.attrs[_TEXT_CODEC_ATTR] = "json-tagged"
+    result.attrs[_TEXT_CODEC_ATTR] = _TEXT_MARKER
     for key in ("dtype", "_FillValue", "missing_value"):
         result.encoding.pop(key, None)
     return result
 
 
-def _decode_text(data):
+def _reject_json_constant(value):
+    raise ValueError("JSON constants are not diagnostic text records")
+
+
+def _decode_text(data, group, var):
     marker = data.attrs[_TEXT_CODEC_ATTR]
-    if not isinstance(marker, str) or marker != "json-tagged":
-        raise ValueError("unknown divergence_message text codec")
+    if (marker != _TEXT_MARKER and
+            not (marker == "json-tagged" and var == "divergence_message")):
+        raise ValueError(f"unknown diagnostic text codec for {group}.{var}")
     values = np.empty(data.shape, dtype=object)
     for index in np.ndindex(data.shape):
         try:
             raw = data.values[index]
-            if not isinstance(raw, (str, np.str_)):
-                raise ValueError("text codec record must be a string")
-            record = json.loads(raw)
+            if not isinstance(raw, (str, np.str_)) or not raw.isascii():
+                raise ValueError("text codec record must be an ASCII string")
+            record = json.loads(raw, parse_constant=_reject_json_constant)
             if not isinstance(record, list) or not record or type(record[0]) is not int:
                 raise ValueError("invalid text codec record")
             if record == [0]:
@@ -164,11 +176,14 @@ def _decode_text(data):
                 value = base64.b64decode(record[1], validate=True)
                 if base64.b64encode(value).decode("ascii") != record[1]:
                     raise ValueError("non-canonical base64")
+            elif record == [3] and marker == _TEXT_MARKER:
+                value = float("nan")
             else:
                 raise ValueError("invalid text codec record")
             values[index] = value
         except (ValueError, TypeError, binascii.Error) as exc:
-            raise ValueError("malformed divergence_message text codec record") from exc
+            raise ValueError(f"malformed diagnostic text codec record {group}.{var} "
+                             f"at index {index}") from exc
     result = data.copy(data=values)
     result.attrs.pop(_TEXT_CODEC_ATTR)
     for key in ("dtype", "_FillValue", "missing_value"):
@@ -179,8 +194,9 @@ def _decode_text(data):
 def sanitize_inference_data(idata, copy: bool = True):
     """Return an independent copy whose attrs and data can be written to NetCDF.
 
-    Divergence messages use a tagged text codec; explicitly numeric object arrays
-    in SMC sample_stats are coerced. Other object arrays are rejected.
+    Diagnostic text uses a tagged codec in sample_stats and warmup_sample_stats;
+    explicitly numeric object arrays in SMC sample_stats are coerced. Other
+    object arrays are rejected.
     """
     result = __import__("copy").deepcopy(idata) if copy else idata
     for container in _containers(result):
@@ -189,12 +205,11 @@ def sanitize_inference_data(idata, copy: bool = True):
         group = get_group(result, name)
         for var in list(getattr(group, "data_vars", ())):
             data = group[var]
-            if name in _TEXT_GROUPS and var == "divergence_message":
-                if _TEXT_CODEC_ATTR in data.attrs:
-                    raise ValueError(f"reserved cache attribute {_TEXT_CODEC_ATTR} already exists")
-                if data.dtype == object:
-                    group[var] = _encode_text(data)
-                    continue
+            if _TEXT_CODEC_ATTR in data.attrs:
+                raise ValueError(f"reserved cache attribute {_TEXT_CODEC_ATTR} already exists")
+            if name in _TEXT_GROUPS and var in _TEXT_VARS and data.dtype == object:
+                group[var] = _encode_text(data, name, var)
+                continue
             if data.dtype == object:
                 if name == "sample_stats" and var in {
                     "beta", "accept_rate", "log_marginal_likelihood"
@@ -227,12 +242,14 @@ def load_inference_data(path: str | Path):
             close()
     for container in _containers(idata):
         _restore_attrs(getattr(container, "attrs", None))
-    for name in _TEXT_GROUPS:
+    for name in group_names(idata):
         group = get_group(idata, name)
-        if group is not None and "divergence_message" in group:
-            data = group["divergence_message"]
+        for var in list(group.data_vars):
+            data = group[var]
             if _TEXT_CODEC_ATTR in data.attrs:
-                group["divergence_message"] = _decode_text(data)
+                if name not in _TEXT_GROUPS or var not in _TEXT_VARS:
+                    raise ValueError(f"unknown diagnostic text codec for {name}.{var}")
+                group[var] = _decode_text(data, name, var)
     return idata
 
 

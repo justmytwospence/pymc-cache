@@ -17,8 +17,8 @@ from pymc_cache.io import get_group, load_inference_data, save_inference_data
 from pymc_cache.naming import model_slug, params_label
 from pymc_cache.policy import CacheWarning
 
-_ENTRY_SCHEMA = 2
-_ENTRY_META = "_pymc_cache_entry_v2"
+_ENTRY_SCHEMA = 3
+_ENTRY_META = "_pymc_cache_entry_v3"
 
 
 class CacheBackend(Protocol):
@@ -151,13 +151,14 @@ class DiskCache:
 
             try:
                 with h5py.File(path, "r") as existing:
-                    legacy = "posterior" in existing and "_pymc_cache_entry_v1" in existing[
-                        "posterior"
-                    ].attrs
+                    legacy = "posterior" in existing and any(
+                        f"_pymc_cache_entry_v{version}" in existing["posterior"].attrs
+                        for version in (1, 2)
+                    )
             except OSError:
                 legacy = False
             if legacy:
-                raise ValueError("refusing to overwrite a schema-1 cache entry")
+                raise ValueError("refusing to overwrite a schema-1/2 cache entry")
         import time
 
         metadata = {"key": key, "schema": _ENTRY_SCHEMA, "status": status,
