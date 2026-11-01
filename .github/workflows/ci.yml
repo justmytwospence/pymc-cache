@@ -39,10 +39,10 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b # v2.2.0
       - run: uv python install 3.13
       - run: uv lock --check --no-config
-      - run: uv run --frozen python -c 'import pymc_cache, quartodoc'
+      - run: uv run --frozen --group docs python -c 'import pymc_cache, quartodoc'
       - run: bash scripts/build-docs.sh
       - run: uv build --no-sources
-      - run: uv run --frozen twine check dist/*
+      - run: uv run --frozen --group dev twine check dist/*
       - run: uv run --frozen python scripts/check_artifact.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
