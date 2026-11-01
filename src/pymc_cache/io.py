@@ -185,6 +185,10 @@ def _decode_text(data, group, var):
             raise ValueError(f"malformed diagnostic text codec record {group}.{var} "
                              f"at index {index}") from exc
     result = data.copy(data=values)
+    # xarray normalizes mixed object None/NaN to NaN while constructing a
+    # DataArray. Restore the decoded entries after construction, before the
+    # caller attaches the array to its group.
+    result.values[...] = values
     result.attrs.pop(_TEXT_CODEC_ATTR)
     for key in ("dtype", "_FillValue", "missing_value"):
         result.encoding.pop(key, None)

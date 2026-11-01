@@ -76,6 +76,28 @@ def test_roundtrip(tmp_path, group, var, values):
     assert_values(restored.values, original.values)
 
 
+@pytest.mark.parametrize("group", GROUPS)
+@pytest.mark.parametrize("var", VARS)
+def test_mixed_none_and_nan_survive_api_boundary(tmp_path, group, var):
+    # xarray/ArviZ may normalize None to NaN during Dataset construction.
+    # Restore it after attachment and assert the actual input to our codec.
+    source = make_idata([float("nan"), None, "diverged"], group, var)
+    original = source[group][var]
+    original.values[1] = None
+    assert original.dtype == object
+    assert type(original.values[0]) is float and np.isnan(original.values[0])
+    assert original.values[1] is None
+    assert original.values[2] == "diverged"
+    path = tmp_path / "mixed.nc"
+    save_inference_data(source, path)
+    actual = load_inference_data(path)[group][var]
+    assert actual.dtype == object
+    assert type(actual.values[0]) is float and np.isnan(actual.values[0])
+    assert actual.values[1] is None
+    assert actual.values[2] == "diverged"
+    assert original.values[1] is None  # caching did not mutate the caller's trace
+
+
 def marked_file(tmp_path, record, marker="json-tagged-v2", group="sample_stats",
                 var="divergence_message"):
     source = make_idata([None], group, var)
