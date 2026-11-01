@@ -1,0 +1,7 @@
+# CachePolicy { #pymc_cache.CachePolicy }
+
+```python
+CachePolicy(reuse_unseeded=True)
+```
+
+Select whether unseeded sampling may reuse a previous run.

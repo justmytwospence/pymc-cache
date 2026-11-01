@@ -1,0 +1,16 @@
+# sample_smc { #pymc_cache.sample_smc }
+
+```python
+sample_smc(
+    model=None,
+    cache=True,
+    overwrite=False,
+    policy=None,
+    namespace='',
+    model_key=None,
+    sampler_key=None,
+    **sample_kwargs,
+)
+```
+
+Run and cache ``pm.sample_smc`` without conflating it with NUTS.

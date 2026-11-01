@@ -1,0 +1,48 @@
+# CacheSession { #pymc_cache.CacheSession }
+
+```python
+CacheSession(
+    cache=True,
+    *,
+    model=None,
+    policy=None,
+    namespace='',
+    model_key=None,
+    sampler_key=None,
+)
+```
+
+Compute identity and check a cache before beginning costly sampling.
+
+Reuse the returned CacheLookup with :meth:`store` after sampling completes.
+This API lets a remote caller avoid provisioning a container on a hit.
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [lookup](#pymc_cache.CacheSession.lookup) | Return a hit, a storable miss, or a safe uncacheable miss. |
+| [store](#pymc_cache.CacheSession.store) | Publish only if graph and result still match the preflight identity. |
+
+### lookup { #pymc_cache.CacheSession.lookup }
+
+```python
+CacheSession.lookup(
+    sample_kwargs,
+    *,
+    operation='sample',
+    overwrite=False,
+    versions=None,
+    sampler_identity=None,
+)
+```
+
+Return a hit, a storable miss, or a safe uncacheable miss.
+
+### store { #pymc_cache.CacheSession.store }
+
+```python
+CacheSession.store(lookup, idata, *, status='complete', effective_sampler=None)
+```
+
+Publish only if graph and result still match the preflight identity.

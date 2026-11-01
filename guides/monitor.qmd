@@ -1,0 +1,7 @@
+---
+title: Optional monitor composition
+---
+
+`pymc-cache` does not depend on `pymc-monitor`, import it, or start monitoring. Run `python examples/monitor_composition.py` to exercise the same integration seam using native PyMC as the injected runner. In your application, pass your installed monitor's sampling callable to `run_with_monitor` instead of `pm.sample`, using kwargs it actually accepts. The callable is invoked only after `CacheSession.lookup` misses, so a cache hit avoids provisioning the monitor or remote service.
+
+The adapter sets a caller-maintained `sampler_identity` and `versions`. Include every setting that changes the sampler in the `lookup` options, and update identity/versions when its implementation changes. A monitored adaptive run (`until=...`) is never saved without a convergence report with `status="met"` and `met=true` in `posterior.attrs["pymc_monitor_convergence"]`. Stopped, capped, futile and unverified outcomes are returned but not cached. A monitor integration can instead implement `__pymc_cache_normalize__(model, call_kwargs)` and pass itself as `sample_fn` to `pc.sample`; see [identity and safety](identity.qmd) for that contract. If the monitor's report or option normalization cannot be verified, pass `cache=False` instead of reusing an uncertain posterior.

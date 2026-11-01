@@ -1,0 +1,7 @@
+# CacheBackend { #pymc_cache.CacheBackend }
+
+```python
+CacheBackend()
+```
+
+Minimal backend interface; extra management operations are optional.

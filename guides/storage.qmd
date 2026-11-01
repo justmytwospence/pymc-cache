@@ -7,10 +7,10 @@ title: Storage and management
 Disk entries are NetCDF files under a human-readable model directory. Each filename contains the full 64-digit SHA-256 key, and the posterior group includes schema, key, status, operation, creation time and versions. Reads verify the embedded key and status before returning fully loaded data. Writes serialize to a unique temporary file, then atomically replace the entry. Corrupt files are treated as misses with a warning; nothing untrusted is executed from the metadata. Only complete or verified `met` results may be stored. The default limit is 20 entries per model.
 
 ```bash
-pymc-cache --dir .pymc-cache list
-pymc-cache --dir .pymc-cache list --json
-pymc-cache --dir .pymc-cache prune --keep 10
-pymc-cache --dir .pymc-cache clear
+pymc-cache --directory .pymc-cache list
+pymc-cache --directory .pymc-cache list --json
+pymc-cache --directory .pymc-cache prune --keep 10
+pymc-cache --directory .pymc-cache clear --yes
 ```
 
-`cleanup_cache(path)` removes only entries recognized as this package's format. Management commands preserve unrelated files, legacy formats and symlinks, and do not delete the root directory. These commands permanently remove selected cache entries, not your underlying model or data. Restrict directory permissions because posterior samples may reveal sensitive observations.
+`clear` refuses to run without `--yes`; `--dir` remains an alias for `--directory`. `cleanup_cache(path)` removes only entries recognized as this package's format. Management commands preserve unrelated files, legacy formats and symlinks, and do not delete the root directory. These commands permanently remove selected cache entries, not your underlying model or data. Restrict directory permissions because posterior samples may reveal sensitive observations.

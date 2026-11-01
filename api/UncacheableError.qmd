@@ -1,0 +1,7 @@
+# UncacheableError { #pymc_cache.UncacheableError }
+
+```python
+UncacheableError()
+```
+
+Raised when the identity of a model or sampling option cannot be established.

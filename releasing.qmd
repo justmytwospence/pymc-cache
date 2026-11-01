@@ -2,10 +2,10 @@
 title: Release checklist
 ---
 
-1. Run `bash scripts/lock.sh` and `uv run --locked pytest -q --cov=pymc_cache --cov-fail-under=85`.
-2. Run `uv run --locked ruff check src tests scripts` and `bash scripts/build-docs.sh`.
+1. Run `bash scripts/lock.sh` and `uv run --frozen pytest -q --cov=pymc_cache --cov-fail-under=85`.
+2. Run `uv run --frozen ruff check src tests scripts examples` and `bash scripts/build-docs.sh`.
 3. Validate PyMC 5.28/ArviZ 0.x and PyMC 6/ArviZ 1.x on the supported Python matrix in CI.
 4. Build with `uv build --no-sources`; run `python scripts/check_artifact.py` for archive scope and isolated wheel/sdist smoke tests.
-5. Inspect `dist/` and changelog, then tag a reviewed commit. Publishing to PyPI and GitHub Pages is a separate, manual release action.
+5. Inspect `dist/` and changelog, then tag a reviewed commit. PyPI publishing remains a separate manual tag-gated action. Docs build on PRs; GitHub Pages deploys from main only.
 
 Never upload test results or real posterior data. Do not remove old external cache directories during migration.

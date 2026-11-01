@@ -1,0 +1,7 @@
+---
+title: Migrating legacy caches
+---
+
+This package does **not** read or convert cloudposterior cache entries. Leave old files where they are: the new disk format uses independently validated metadata and a full SHA-256 key, and management commands only remove new-format owned entries. No legacy model, sampler or key can be assumed equivalent. Start with a new private cache directory (`cache=Path("new-cache")`) and resample; compare posterior diagnostics before retiring old data yourself. `cleanup_cache` and `pymc-cache clear --yes` do not erase legacy or foreign files.
+
+Keys are invalidated when model graph, data, coordinates, sampling arguments, RNG state, operation or software versions change. For custom Ops supply a `model_key` that changes with their implementation. For callbacks/steps or custom runners, supply a `sampler_key` or verified normalization contract that changes when their implementation or captured configuration changes. Do not reuse old external keys, manually rename files, or copy metadata to manufacture a hit. Refer to [identity](identity.qmd) and [storage](storage.qmd) for the exact safety rules.

@@ -1,0 +1,15 @@
+# cache_key { #pymc_cache.cache_key }
+
+```python
+cache_key(
+    model_identity,
+    sample_kwargs,
+    *,
+    operation='sample',
+    versions=None,
+    namespace='',
+    sampler_key=None,
+)
+```
+
+Full SHA-256 identity of a model, sampler settings and environment.

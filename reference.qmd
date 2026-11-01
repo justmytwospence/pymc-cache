@@ -2,7 +2,7 @@
 title: API reference
 ---
 
-::: {#api}
+The [generated API pages](api/index.qmd) are built from public Python docstrings with quartodoc. The table below is a short index; refer to the generated reference for signatures and details.
 
 | Object | Purpose |
 |---|---|
@@ -16,4 +16,3 @@ title: API reference
 | `model_digest(model, *, model_key=None)`, `cache_key(model_identity, sample_kwargs, *, operation="sample", versions=None, namespace="", sampler_key=None)` | Versioned content hashes; unsafe inputs fail closed. |
 | `cleanup_cache(base_dir=None)` | Remove only owned disk entries and leave foreign data untouched. |
 
-:::

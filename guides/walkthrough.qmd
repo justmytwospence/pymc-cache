@@ -1,0 +1,11 @@
+---
+title: Caching walkthrough
+---
+
+Install from a reviewed Git commit until the first PyPI release (see [getting started](../getting-started.qmd)). Try `python examples/basic.py` from the repository to run a ten-draw model twice in a private temporary disk directory. The second call returns a copy of the saved posterior, rather than calling `pm.sample` again.
+
+Choose `cache=True` for an eight-entry process-local LRU, `cache="disk"` for `.pymc-cache/`, a `Path` for a private disk directory, or `cache=False` to skip identity work and run the sampler every time. Pass `overwrite=True` to force a fresh run and atomically replace its matching entry. Pin `random_seed` to make sampling reproducible; by default unseeded runs can reuse results, while `CachePolicy(reuse_unseeded=False)` forbids that.
+
+A lookup is made before sampling. The key combines model graph, observations, coordinates, sampler/options, software versions, namespace, and RNG state. Changing data or settings gives a miss; unknown custom Ops and callbacks fail closed without an explicit caller-maintained identity. On a miss, only a complete posterior with the requested chains and draws is saved. For remote or monitored runs, use [preflight](../examples/preflight.py) to avoid starting expensive work on a hit and inspect the [monitor composition](monitor.qmd) guide.
+
+Run `python examples/custom_backend.py` for a fully runnable custom backend. The backend implements `load(key, **kwargs)` and `save(key, idata, **kwargs)`; it must copy on read/write if callers should not mutate stored data. The package makes no guarantees about the atomicity or retention policy of a caller-supplied backend. Disk storage has its own atomic writes and [CLI management](storage.qmd).

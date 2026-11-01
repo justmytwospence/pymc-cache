@@ -16,8 +16,8 @@ with pm.Model() as model:
     pm.Normal("mu", 0, 1)
 
 session = pc.CacheSession(cache="disk", model=model)
-lookup = session.lookup({"draws": 100, "tune": 100, "chains": 1,
-                         "cores": 1, "random_seed": 3})
+lookup = session.lookup({"draws": 10, "tune": 10, "chains": 1,
+                         "cores": 1, "random_seed": 3, "progressbar": False})
 if lookup.hit:
     trace = lookup.result
 else:

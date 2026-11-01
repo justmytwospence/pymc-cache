@@ -1,0 +1,21 @@
+# CacheLookup { #pymc_cache.CacheLookup }
+
+```python
+CacheLookup(
+    backend,
+    key,
+    hit,
+    result,
+    normalized_kwargs,
+    disable_reason,
+    operation,
+    versions,
+    sampler_identity,
+    pre_run_model_digest,
+)
+```
+
+Immutable record of a pre-sampling cache lookup.
+
+``result`` is non-None only for a hit; ``key`` is usable by a later store.
+``normalized_kwargs`` is a snapshot, including pre-sampling RNG state.

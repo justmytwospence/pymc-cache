@@ -1,0 +1,7 @@
+# cleanup_cache { #pymc_cache.cleanup_cache }
+
+```python
+cleanup_cache(base_dir=None)
+```
+
+Remove only new-format entries in a directory; do not delete the root.

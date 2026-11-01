@@ -1,0 +1,21 @@
+# MemoryCache { #pymc_cache.MemoryCache }
+
+```python
+MemoryCache(max_entries=8)
+```
+
+Thread-safe, copy-isolated LRU of posterior results.
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [clear](#pymc_cache.MemoryCache.clear) | Discard stored entries and return the number removed. |
+
+### clear { #pymc_cache.MemoryCache.clear }
+
+```python
+MemoryCache.clear()
+```
+
+Discard stored entries and return the number removed.

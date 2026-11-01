@@ -1,0 +1,7 @@
+# CacheWarning { #pymc_cache.CacheWarning }
+
+```python
+CacheWarning()
+```
+
+A cache was bypassed or an entry could not be persisted.

@@ -1,0 +1,20 @@
+# Function reference {.doc .doc-index}
+
+## Public API
+
+| | |
+| --- | --- |
+| [sample](sample.qmd#pymc_cache.sample) | Run ``pm.sample`` (or a trusted runner), reusing a matching result. |
+| [sample_smc](sample_smc.qmd#pymc_cache.sample_smc) | Run and cache ``pm.sample_smc`` without conflating it with NUTS. |
+| [CacheBackend](CacheBackend.qmd#pymc_cache.CacheBackend) | Minimal backend interface; extra management operations are optional. |
+| [MemoryCache](MemoryCache.qmd#pymc_cache.MemoryCache) | Thread-safe, copy-isolated LRU of posterior results. |
+| [DiskCache](DiskCache.qmd#pymc_cache.DiskCache) | One-file, full-key-verified atomic NetCDF result cache. |
+| [CacheSession](CacheSession.qmd#pymc_cache.CacheSession) | Compute identity and check a cache before beginning costly sampling. |
+| [CachePolicy](CachePolicy.qmd#pymc_cache.CachePolicy) | Select whether unseeded sampling may reuse a previous run. |
+| [CacheEntry](CacheEntry.qmd#pymc_cache.CacheEntry) | Metadata for an owned, valid disk entry (without loading posterior arrays). |
+| [CacheLookup](CacheLookup.qmd#pymc_cache.CacheLookup) | Immutable record of a pre-sampling cache lookup. |
+| [UncacheableError](UncacheableError.qmd#pymc_cache.UncacheableError) | Raised when the identity of a model or sampling option cannot be established. |
+| [CacheWarning](CacheWarning.qmd#pymc_cache.CacheWarning) | A cache was bypassed or an entry could not be persisted. |
+| [cleanup_cache](cleanup_cache.qmd#pymc_cache.cleanup_cache) | Remove only new-format entries in a directory; do not delete the root. |
+| [model_digest](model_digest.qmd#pymc_cache.model_digest) | Content hash of model graph, data, outputs and coordinates. |
+| [cache_key](cache_key.qmd#pymc_cache.cache_key) | Full SHA-256 identity of a model, sampler settings and environment. |

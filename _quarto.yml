@@ -6,6 +6,7 @@ project:
     - getting-started.qmd
     - guides/*.qmd
     - reference.qmd
+    - api/*.qmd
     - contributing.qmd
     - releasing.qmd
 website:
@@ -22,6 +23,26 @@ website:
         text: Storage
       - href: reference.qmd
         text: API
+quartodoc:
+  package: pymc_cache
+  dir: api
+  sections:
+    - title: Public API
+      contents:
+        - sample
+        - sample_smc
+        - CacheBackend
+        - MemoryCache
+        - DiskCache
+        - CacheSession
+        - CachePolicy
+        - CacheEntry
+        - CacheLookup
+        - UncacheableError
+        - CacheWarning
+        - cleanup_cache
+        - model_digest
+        - cache_key
 format:
   html:
     theme: cosmo

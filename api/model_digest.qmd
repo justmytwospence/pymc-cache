@@ -1,0 +1,10 @@
+# model_digest { #pymc_cache.model_digest }
+
+```python
+model_digest(model, *, model_key=None)
+```
+
+Content hash of model graph, data, outputs and coordinates.
+
+Custom Python operations require a user-maintained ``model_key``. Their
+implementation cannot be inferred reliably from an Op's class name.

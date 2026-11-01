@@ -42,7 +42,7 @@ path = "src/pymc_cache/_version.py"
 packages = ["src/pymc_cache"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "scripts", "examples", "guides", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "AGENTS.md", "pyproject.toml", "_quarto.yml", "index.qmd", "getting-started.qmd", "contributing.qmd", "releasing.qmd", "reference.qmd", "custom.scss"]
+include = ["src", "tests", "scripts", "examples", "guides", "api", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "AGENTS.md", "pyproject.toml", "_quarto.yml", "index.qmd", "getting-started.qmd", "contributing.qmd", "releasing.qmd", "reference.qmd", "custom.scss"]
 exclude = [".extraction-source", "uv.lock", ".git", ".pi", "_site", "dist"]
 
 [tool.pytest.ini_options]

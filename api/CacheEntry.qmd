@@ -1,0 +1,16 @@
+# CacheEntry { #pymc_cache.CacheEntry }
+
+```python
+CacheEntry(
+    key,
+    model_slug,
+    operation,
+    created_at,
+    size_bytes,
+    status,
+    path,
+    software_versions,
+)
+```
+
+Metadata for an owned, valid disk entry (without loading posterior arrays).

@@ -1,0 +1,52 @@
+# DiskCache { #pymc_cache.DiskCache }
+
+```python
+DiskCache(base_dir=None, model=None, *, max_entries_per_model=20)
+```
+
+One-file, full-key-verified atomic NetCDF result cache.
+
+Entries live at ``<root>/<model>/<parameters>-<full-sha256>.nc``. Contents
+have an independently checked full key and schema; legacy files are never
+reused. The directory is a trusted local cache, not an untrusted file reader.
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [clear](#pymc_cache.DiskCache.clear) | Delete only format-owned entries, preserving other files. |
+| [delete](#pymc_cache.DiskCache.delete) | Remove matching owned entries, never arbitrary files or symlinks. |
+| [entries](#pymc_cache.DiskCache.entries) | List this format's entries without materializing posterior data. |
+| [prune](#pymc_cache.DiskCache.prune) | Keep the N newest entries per model; return count removed. |
+
+### clear { #pymc_cache.DiskCache.clear }
+
+```python
+DiskCache.clear()
+```
+
+Delete only format-owned entries, preserving other files.
+
+### delete { #pymc_cache.DiskCache.delete }
+
+```python
+DiskCache.delete(key)
+```
+
+Remove matching owned entries, never arbitrary files or symlinks.
+
+### entries { #pymc_cache.DiskCache.entries }
+
+```python
+DiskCache.entries()
+```
+
+List this format's entries without materializing posterior data.
+
+### prune { #pymc_cache.DiskCache.prune }
+
+```python
+DiskCache.prune(keep=None)
+```
+
+Keep the N newest entries per model; return count removed.

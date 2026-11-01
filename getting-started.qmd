@@ -14,10 +14,10 @@ import pymc_cache as pc
 
 with pm.Model() as model:
     mu = pm.Normal("mu", 0, 1)
-    trace = pc.sample(model=model, draws=100, tune=100, chains=1,
-                      cores=1, random_seed=12, cache="disk", progressbar=False)
-    again = pc.sample(model=model, draws=100, tune=100, chains=1,
-                      cores=1, random_seed=12, cache="disk", progressbar=False)
+    options = dict(model=model, draws=10, tune=10, chains=1,
+                   cores=1, random_seed=12, cache="disk", progressbar=False)
+    trace = pc.sample(**options)
+    again = pc.sample(**options)
 ```
 
 `cache=True` uses an eight-entry in-memory LRU. `cache="disk"` uses `.pymc-cache/`; a custom path selects a private cache directory. `cache=False` neither hashes the model nor reads/writes cache data. `overwrite=True` skips reading and atomically replaces a matching entry. Use `pc.sample_smc(model=model, ...)` for a separate SMC identity.
@@ -26,7 +26,8 @@ For remote transports that must avoid provisioning on a cache hit:
 
 ```python
 session = pc.CacheSession(cache="disk", model=model)
-lookup = session.lookup({"draws": 100, "random_seed": 12})
+lookup = session.lookup({"draws": 10, "tune": 10, "chains": 1, "cores": 1,
+                         "random_seed": 12, "progressbar": False})
 if lookup.hit:
     trace = lookup.result
 else:

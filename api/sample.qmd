@@ -1,0 +1,21 @@
+# sample { #pymc_cache.sample }
+
+```python
+sample(
+    model=None,
+    cache=True,
+    overwrite=False,
+    policy=None,
+    namespace='',
+    model_key=None,
+    sampler_key=None,
+    sample_fn=None,
+    **sample_kwargs,
+)
+```
+
+Run ``pm.sample`` (or a trusted runner), reusing a matching result.
+
+No global PyMC function is replaced. ``cache='disk'`` persists under
+``.pymc-cache``; ``cache=False`` always samples anew. A user-supplied
+sample_fn must opt into safe identity or supply a trusted sampler_key.

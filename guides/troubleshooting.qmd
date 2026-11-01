@@ -1,0 +1,11 @@
+---
+title: Troubleshooting
+---
+
+- **Every call misses:** Ensure you pass the same model, data, sampler kwargs, seed/RNG state and software versions. `overwrite=True` always skips reads. `cache=False` intentionally bypasses hashing. A custom runner without a trusted normalization hook needs `sampler_key`; a custom model Op needs `model_key`. `CachePolicy(reuse_unseeded=False)` disables unseeded lookup.
+- **Warning about an unsafe callback or step:** Supply a unique, maintained `sampler_key` identifying its implementation and configuration, or run uncached. Do not suppress the warning and assume reuse is safe.
+- **Warning about a corrupt file or mismatched key:** The file is a miss, never a hit. Check permissions and free space, then resample into a private directory. Do not edit the embedded key or use a shared untrusted cache.
+- **A completed run was not saved:** Verify posterior chain/draw counts, status and the model graph after sampling. Adaptive runs need an attested `met` report; stopped/capped/futile runs must not be stored. The original result remains available even if storage fails.
+- **Cannot delete entries:** `pymc-cache --directory PATH list --json` shows owned files; `clear` requires `--yes` and never deletes unrelated files. `--dir` is an alias for `--directory`. `prune --keep N` retains the newest N per model.
+
+See [caching walkthrough](walkthrough.qmd), [migration](migration.qmd), and [API reference](../reference.qmd).
