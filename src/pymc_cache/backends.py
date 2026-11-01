@@ -17,8 +17,8 @@ from pymc_cache.io import get_group, load_inference_data, save_inference_data
 from pymc_cache.naming import model_slug, params_label
 from pymc_cache.policy import CacheWarning
 
-_ENTRY_SCHEMA = 1
-_ENTRY_META = "_pymc_cache_entry_v1"
+_ENTRY_SCHEMA = 2
+_ENTRY_META = "_pymc_cache_entry_v2"
 
 
 class CacheBackend(Protocol):
@@ -146,6 +146,18 @@ class DiskCache:
         path.parent.mkdir(parents=True, exist_ok=True)
         if self._base.is_symlink() or path.parent.is_symlink():
             raise ValueError("refusing to write through a cache symlink")
+        if path.exists():
+            import h5py
+
+            try:
+                with h5py.File(path, "r") as existing:
+                    legacy = "posterior" in existing and "_pymc_cache_entry_v1" in existing[
+                        "posterior"
+                    ].attrs
+            except OSError:
+                legacy = False
+            if legacy:
+                raise ValueError("refusing to overwrite a schema-1 cache entry")
         import time
 
         metadata = {"key": key, "schema": _ENTRY_SCHEMA, "status": status,

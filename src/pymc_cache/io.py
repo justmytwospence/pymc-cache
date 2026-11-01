@@ -1,12 +1,16 @@
 """Lossless-enough, NetCDF-safe storage for PyMC 5 and 6 inference objects."""
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from pathlib import Path
 
 import numpy as np
 
 _CODEC_ATTR = "_pymc_cache_attrs_codec_v1"
+_TEXT_CODEC_ATTR = "_pymc_cache_text_codec_v1"
+_TEXT_GROUPS = {"sample_stats", "warmup_sample_stats"}
 
 
 def group_names(idata) -> list[str]:
@@ -118,11 +122,65 @@ def _containers(idata):
                     yield group[key]
 
 
+def _encode_text(data):
+    records = []
+    for value in data.values.flat:
+        if value is None:
+            record = [0]
+        elif type(value) in (str, np.str_):
+            record = [1, str(value)]
+        elif type(value) in (bytes, np.bytes_):
+            record = [2, base64.b64encode(bytes(value)).decode("ascii")]
+        else:
+            raise TypeError("unsupported divergence_message object value")
+        records.append(json.dumps(record, ensure_ascii=True))
+    width = max((len(record) for record in records), default=1)
+    encoded = np.asarray(records, dtype=f"U{width}").reshape(data.shape)
+    result = data.copy(data=encoded)
+    result.attrs[_TEXT_CODEC_ATTR] = "json-tagged"
+    for key in ("dtype", "_FillValue", "missing_value"):
+        result.encoding.pop(key, None)
+    return result
+
+
+def _decode_text(data):
+    marker = data.attrs[_TEXT_CODEC_ATTR]
+    if not isinstance(marker, str) or marker != "json-tagged":
+        raise ValueError("unknown divergence_message text codec")
+    values = np.empty(data.shape, dtype=object)
+    for index in np.ndindex(data.shape):
+        try:
+            raw = data.values[index]
+            if not isinstance(raw, (str, np.str_)):
+                raise ValueError("text codec record must be a string")
+            record = json.loads(raw)
+            if not isinstance(record, list) or not record or type(record[0]) is not int:
+                raise ValueError("invalid text codec record")
+            if record == [0]:
+                value = None
+            elif len(record) == 2 and record[0] == 1 and type(record[1]) is str:
+                value = record[1]
+            elif len(record) == 2 and record[0] == 2 and type(record[1]) is str:
+                value = base64.b64decode(record[1], validate=True)
+                if base64.b64encode(value).decode("ascii") != record[1]:
+                    raise ValueError("non-canonical base64")
+            else:
+                raise ValueError("invalid text codec record")
+            values[index] = value
+        except (ValueError, TypeError, binascii.Error) as exc:
+            raise ValueError("malformed divergence_message text codec record") from exc
+    result = data.copy(data=values)
+    result.attrs.pop(_TEXT_CODEC_ATTR)
+    for key in ("dtype", "_FillValue", "missing_value"):
+        result.encoding.pop(key, None)
+    return result
+
+
 def sanitize_inference_data(idata, copy: bool = True):
     """Return an independent copy whose attrs and data can be written to NetCDF.
 
-    Only explicitly numeric object arrays in SMC sample_stats are coerced; other
-    object arrays raise rather than silently losing Python values.
+    Divergence messages use a tagged text codec; explicitly numeric object arrays
+    in SMC sample_stats are coerced. Other object arrays are rejected.
     """
     result = __import__("copy").deepcopy(idata) if copy else idata
     for container in _containers(result):
@@ -131,6 +189,12 @@ def sanitize_inference_data(idata, copy: bool = True):
         group = get_group(result, name)
         for var in list(getattr(group, "data_vars", ())):
             data = group[var]
+            if name in _TEXT_GROUPS and var == "divergence_message":
+                if _TEXT_CODEC_ATTR in data.attrs:
+                    raise ValueError(f"reserved cache attribute {_TEXT_CODEC_ATTR} already exists")
+                if data.dtype == object:
+                    group[var] = _encode_text(data)
+                    continue
             if data.dtype == object:
                 if name == "sample_stats" and var in {
                     "beta", "accept_rate", "log_marginal_likelihood"
@@ -163,6 +227,12 @@ def load_inference_data(path: str | Path):
             close()
     for container in _containers(idata):
         _restore_attrs(getattr(container, "attrs", None))
+    for name in _TEXT_GROUPS:
+        group = get_group(idata, name)
+        if group is not None and "divergence_message" in group:
+            data = group["divergence_message"]
+            if _TEXT_CODEC_ATTR in data.attrs:
+                group["divergence_message"] = _decode_text(data)
     return idata
 
 

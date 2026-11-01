@@ -14,7 +14,7 @@ from collections.abc import Mapping
 
 import numpy as np
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class UncacheableError(ValueError):
