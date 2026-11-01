@@ -1,0 +1,3 @@
+# Security
+
+Cache files contain model outputs and potentially sensitive observed data. Store them in private directories, restrict filesystem permissions, and do not point this package at an untrusted shared cache. A full SHA-256 key is an accidental-collision/identity guard, **not** a cryptographic authenticity check against a malicious writer. Unsupported custom PyTensor Ops require a caller-maintained `model_key`; unsupported sampler steps and callables require a caller-maintained `sampler_key`. Changing their behavior without changing those keys is unsafe. Report vulnerabilities privately through GitHub's private vulnerability reporting. Do not attach real model data or credentials.
